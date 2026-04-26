@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>RPA 演示页面</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #f5f7fa;
+    color: #333;
+    padding: 40px;
+  }
+  h1 { font-size: 22px; margin-bottom: 6px; color: #1a1a2e; }
+  p  { color: #666; font-size: 14px; margin-bottom: 30px; }
+
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+    max-width: 560px;
+  }
+  .card h2 { font-size: 15px; margin-bottom: 16px; color: #444; }
+
+  /* 输入组 */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; font-weight: 500; }
+  .field input[type=text],
+  .field input[type=email] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 7px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { border-color: #4a90e2; }
+
+  /* 文件上传区 */
+  .upload-zone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafafa;
+  }
+  .upload-zone:hover,
+  .upload-zone.dragover { border-color: #4a90e2; background: #f0f6ff; }
+  .upload-zone.has-file  { border-color: #27ae60; background: #f0fff4; }
+  .upload-zone p { font-size: 13px; color: #999; margin: 0; pointer-events: none; }
+  .upload-zone .filename { font-size: 13px; color: #27ae60; font-weight: 600; margin-top: 4px; }
+
+  /* 隐藏的真实 file input */
+  #fileInput { display: none; }
+
+  /* 按钮 */
+  .btn {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    margin-top: 6px;
+  }
+  .btn-primary { background: #4a90e2; color: #fff; }
+  .btn-primary:hover { background: #357abd; }
+  .btn-primary:disabled { background: #a0c4f1; cursor: not-allowed; }
+
+  /* 结果区 */
+  #result {
+    display: none;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    color: #2e7d32;
+  }
+  #result.error { background: #ffebee; border-color: #ef9a9a; color: #c62828; }
+</style>
+</head>
+<body>
+
+<h1>🤖 RPA 演示表单</h1>
+<p>此页面用于演示 Playwright + Electron 自动化操作</p>
+
+<div class="card">
+  <h2>📋 基本信息</h2>
+  <div class="field">
+    <label>姓名</label>
+    <input type="text" id="nameInput" placeholder="请输入姓名" />
+  </div>
+  <div class="field">
+    <label>邮箱</label>
+    <input type="email" id="emailInput" placeholder="请输入邮箱" />
+  </div>
+  <div class="field">
+    <label>备注</label>
+    <input type="text" id="remarkInput" placeholder="请输入备注信息" />
+  </div>
+</div>
+
+<div class="card">
+  <h2>📎 文件上传</h2>
+
+  <!-- 点击区域触发隐藏 input -->
+  <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <p>点击选择文件，或将文件拖拽到此处</p>
+    <div class="filename" id="fileName"></div>
+  </div>
+
+  <!-- 真实的 file input（Playwright 操作这个） -->
+  <input type="file" id="fileInput" accept="image/*,.pdf,.xlsx,.docx" />
+
+  <br />
+  <button class="btn btn-primary" id="submitBtn" onclick="handleSubmit()">
+    提交表单
+  </button>
+
+  <div id="result"></div>
+</div>
+
+<script>
+  // ── 文件选择处理 ─────────────────────────────────────
+  const fileInput  = document.getElementById("fileInput");
+  const uploadZone = document.getElementById("uploadZone");
+  const fileName   = document.getElementById("fileName");
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) {
+      uploadZone.classList.add("has-file");
+      fileName.textContent = "✓ " + fileInput.files[0].name;
+    }
+  });
+
+  // 拖拽支持
+  uploadZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    uploadZone.classList.add("dragover");
+  });
+  uploadZone.addEventListener("dragleave", () => {
+    uploadZone.classList.remove("dragover");
+  });
+  uploadZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove("dragover");
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      // DataTransfer 注入方式（供 Playwright 方案二使用）
+      const dt = new DataTransfer();
+      for (const f of files) dt.items.add(f);
+      fileInput.files = dt.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+
+  // ── 表单提交 ─────────────────────────────────────────
+  function handleSubmit() {
+    const name   = document.getElementById("nameInput").value.trim();
+    const email  = document.getElementById("emailInput").value.trim();
+    const remark = document.getElementById("remarkInput").value.trim();
+    const file   = fileInput.files[0];
+    const result = document.getElementById("result");
+    // alert(file.size);
+
+    if (!name || !email) {
+      result.style.display = "block";
+      result.className = "error";
+      result.textContent = "❌ 姓名和邮箱为必填项";
+      return;
+    }
+
+    result.style.display = "block";
+    result.className = "";
+    result.textContent =
+      `✅ 提交成功！姓名：${name}，邮箱：${email}` +
+      (remark ? `，备注：${remark}` : "") +
+      (file   ? `，文件：${file.name}` : "");
+
+    // 把结果写到 data 属性，方便 Playwright 断言读取
+    document.getElementById("submitBtn").dataset.submitted = "true";
+  }
+</script>
+</body>
+</html>
