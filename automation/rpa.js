@@ -15,7 +15,7 @@
  * ─────────────────────────────────────────────────────────
  */
 
-const { _electron: electron } = require("playwright");
+const { _electron: electron, chromium} = require("playwright-core");
 const path = require("path");
 const os   = require("os");
 const fs   = require("fs");
@@ -93,6 +93,9 @@ async function main() {
     // ────────────────────────────────────────────────────
     log.step(1, "启动 Electron 应用");
     // ────────────────────────────────────────────────────
+
+    // const browser=await chromium.connectOverCDP('http://localhost:9222');
+    // const page = await browser.contexts()[0].pages()[0];
 
     electronApp = await electron.launch({
       args: [CONFIG.electronMain],

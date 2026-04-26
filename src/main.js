@@ -12,8 +12,8 @@ const electron_1 = require("electron");
 
 // ── 让 Playwright 能连接进来的关键参数 ──────────────────
 // 必须加这两个 flag，Playwright 才能通过 CDP 协议接管窗口
-// app.commandLine.appendSwitch("remote-debugging-port", "9222");
-// app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1");
+app.commandLine.appendSwitch("remote-debugging-port", "9222");
+app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1");
 
 let mainWindow;
 
